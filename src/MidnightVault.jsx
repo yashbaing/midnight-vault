@@ -305,6 +305,9 @@ export default function MidnightVault() {
   const [autoInvest, setAI]     = useState(true);
   const [connected, setConn]    = useState(false);
   const [connecting, setCing]   = useState(false);
+  const [walletAddr, setWalletAddr] = useState(null);
+  const [walletBal, setWalletBal]   = useState(null); // ETH balance
+  const [chainId, setChainId]       = useState(null);
   const [txLog, setTxLog]       = useState([]);
   const [depModal, setDepMod]   = useState(null);
   const [depAmt, setDepAmt]     = useState("");
@@ -419,21 +422,133 @@ export default function MidnightVault() {
     block:Math.floor(Math.random()*999999+1000000),
   }, ...l].slice(0,30));
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
+    if (!window.ethereum) {
+      notify("⚠ MetaMask not found — install it from metamask.io");
+      return;
+    }
     setCing(true);
-    setTimeout(() => {
+    try {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const addr = accounts[0];
+      setWalletAddr(addr);
+      const chain = await window.ethereum.request({ method: "eth_chainId" });
+      setChainId(chain);
+      // Fetch ETH balance
+      const balHex = await window.ethereum.request({ method: "eth_getBalance", params: [addr, "latest"] });
+      const balEth = parseInt(balHex, 16) / 1e18;
+      setWalletBal(balEth);
+      // Auto-fill ETH balance in assets
+      setAssets(prev => prev.map(a => a.id === "ETH" ? {...a, balance: +(balEth.toFixed(6))} : a));
       setConn(true); setCing(false);
-      addTx("connect","Wallet connected to Midnight Testnet","0x"+Math.random().toString(16).slice(2,10));
-      notify("🔗 Connected to Midnight Testnet");
-    }, 1800);
+      const shortAddr = addr.slice(0,6) + "…" + addr.slice(-4);
+      addTx("connect", `Wallet ${shortAddr} connected`, addr.slice(0,18));
+      notify(`🔗 Connected: ${shortAddr}`);
+    } catch (err) {
+      setCing(false);
+      notify("❌ Connection rejected");
+    }
   };
 
-  const handleDeposit = () => {
+  const handleDisconnect = () => {
+    setConn(false); setWalletAddr(null); setWalletBal(null); setChainId(null);
+    notify("Wallet disconnected");
+  };
+
+  // Fetch wallet balance helper
+  const refreshWalletBal = async (addr) => {
+    if (!window.ethereum || !addr) return;
+    try {
+      const balHex = await window.ethereum.request({ method: "eth_getBalance", params: [addr, "latest"] });
+      const balEth = parseInt(balHex, 16) / 1e18;
+      setWalletBal(balEth);
+      setAssets(prev => prev.map(a => a.id === "ETH" ? {...a, balance: +(balEth.toFixed(6))} : a));
+    } catch {}
+  };
+
+  // Switch to Sepolia testnet
+  const switchToSepolia = async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0xaa36a7" }], // Sepolia
+      });
+    } catch (err) {
+      if (err.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0xaa36a7",
+            chainName: "Sepolia Testnet",
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://rpc.sepolia.org"],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"],
+          }],
+        });
+      }
+    }
+  };
+
+  // Listen for MetaMask account/chain changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    const onAccounts = (accs) => {
+      if (accs.length === 0) { handleDisconnect(); }
+      else { setWalletAddr(accs[0]); refreshWalletBal(accs[0]); }
+    };
+    const onChain = (ch) => setChainId(ch);
+    window.ethereum.on("accountsChanged", onAccounts);
+    window.ethereum.on("chainChanged", onChain);
+    return () => {
+      window.ethereum.removeListener("accountsChanged", onAccounts);
+      window.ethereum.removeListener("chainChanged", onChain);
+    };
+  }, []);
+
+  // Refresh wallet balance every 30s when connected
+  useEffect(() => {
+    if (!connected || !walletAddr) return;
+    const iv = setInterval(() => refreshWalletBal(walletAddr), 30000);
+    return () => clearInterval(iv);
+  }, [connected, walletAddr]);
+
+  // Network name helper
+  const getNetworkName = (id) => {
+    const nets = { "0x1":"Ethereum Mainnet","0xaa36a7":"Sepolia Testnet","0x89":"Polygon",
+      "0xa4b1":"Arbitrum","0xa":"Optimism","0x38":"BSC","0x2105":"Base" };
+    return nets[id] || `Chain ${parseInt(id, 16)}`;
+  };
+
+  const handleDeposit = async () => {
     const amt = parseFloat(depAmt);
     if (!amt || amt <= 0) return;
-    setAssets(prev => prev.map(a => a.id === depModal.id ? {...a, balance:+(a.balance+amt).toFixed(6)} : a));
-    addTx("deposit",`Deposited ${amt} ${depModal.symbol}`,"0x"+Math.random().toString(16).slice(2,10));
-    notify(`✅ Deposited ${amt} ${depModal.symbol}`);
+    if (depModal.symbol === "ETH" && window.ethereum && walletAddr) {
+      // Real ETH transfer to vault (self-transfer for demo — keeps funds in your wallet)
+      try {
+        const weiHex = "0x" + BigInt(Math.floor(amt * 1e18)).toString(16);
+        const txHash = await window.ethereum.request({
+          method: "eth_sendTransaction",
+          params: [{
+            from: walletAddr,
+            to: walletAddr, // self-transfer for demo
+            value: weiHex,
+          }],
+        });
+        setAssets(prev => prev.map(a => a.id === depModal.id ? {...a, balance:+(a.balance+amt).toFixed(6)} : a));
+        addTx("deposit", `Deposited ${amt} ${depModal.symbol}`, txHash.slice(0,18));
+        notify(`✅ Deposited ${amt} ETH — TX sent!`);
+        // Refresh balance after a short delay
+        setTimeout(() => refreshWalletBal(walletAddr), 5000);
+      } catch (err) {
+        notify("❌ Transaction rejected");
+      }
+    } else {
+      // Simulated for non-ETH assets
+      setAssets(prev => prev.map(a => a.id === depModal.id ? {...a, balance:+(a.balance+amt).toFixed(6)} : a));
+      addTx("deposit", `Deposited ${amt} ${depModal.symbol}`, "0x"+Math.random().toString(16).slice(2,10));
+      notify(`✅ Deposited ${amt} ${depModal.symbol}`);
+    }
     setDepMod(null); setDepAmt("");
   };
 
@@ -611,19 +726,71 @@ export default function MidnightVault() {
               <div style={{ fontSize:16, fontWeight:700, marginBottom:16, color:"#06b6d4" }}>
                 Deposit {depModal.symbol}
               </div>
-              <div style={{ fontSize:11, color:"#64748b", fontFamily:"monospace", marginBottom:10 }}>
+              <div style={{ fontSize:11, color:"#64748b", fontFamily:"monospace", marginBottom:6 }}>
                 Live price: {depModal.price != null ? fmtUSD(depModal.price) : "loading…"}
               </div>
+              {/* Wallet balance */}
+              {connected && depModal.symbol === "ETH" && walletBal != null && (
+                <div style={{ padding:"10px 14px", borderRadius:8, marginBottom:12,
+                  background:"rgba(34,197,94,0.06)", border:"1px solid rgba(34,197,94,0.2)" }}>
+                  <div style={{ fontSize:10, color:"#22c55e", fontFamily:"monospace", letterSpacing:1, marginBottom:4 }}>
+                    WALLET BALANCE
+                  </div>
+                  <div style={{ fontSize:16, fontWeight:800, fontFamily:"monospace", color:"#22c55e" }}>
+                    {walletBal.toFixed(6)} ETH
+                  </div>
+                  <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", marginTop:2 }}>
+                    ≈ {fmtUSD(walletBal * (depModal.price || 0))}
+                  </div>
+                  <button style={{ marginTop:8, background:"none", border:"none", color:"#06b6d4",
+                    fontSize:11, fontFamily:"monospace", cursor:"pointer", padding:0, textDecoration:"underline" }}
+                    onClick={() => setDepAmt(walletBal > 0.001 ? (walletBal - 0.001).toFixed(6) : "0")}>
+                    MAX (keep 0.001 for gas)
+                  </button>
+                </div>
+              )}
               <input style={inp} type="number" min="0" step="any"
                 placeholder={`Amount in ${depModal.symbol}`}
                 value={depAmt} onChange={e => setDepAmt(e.target.value)} />
-              <div style={{ fontSize:11, color:"#475569", fontFamily:"monospace", marginBottom:16 }}>
+              <div style={{ fontSize:11, color:"#475569", fontFamily:"monospace", marginBottom:12 }}>
                 ≈ {depAmt && depModal.price ? fmtUSD(parseFloat(depAmt)*depModal.price) : "$0.00"} USD
               </div>
+              {/* Real TX note for ETH */}
+              {depModal.symbol === "ETH" && connected && (
+                <div style={{ fontSize:10, color:"#eab308", fontFamily:"monospace", marginBottom:12,
+                  padding:"8px 12px", borderRadius:6, background:"rgba(234,179,8,0.06)", border:"1px solid rgba(234,179,8,0.15)" }}>
+                  ⚡ This will send a real transaction from your wallet via MetaMask
+                </div>
+              )}
               <div style={{ display:"flex", gap:10 }}>
-                <button style={btn("#06b6d4",true)} onClick={handleDeposit}>CONFIRM</button>
+                <button style={btn("#06b6d4",true)} onClick={handleDeposit}>
+                  {depModal.symbol === "ETH" && connected ? "SEND TX" : "CONFIRM"}
+                </button>
                 <button style={btn("#ef4444")} onClick={() => setDepMod(null)}>✕</button>
               </div>
+              {/* Faucet links */}
+              {connected && (
+                <div style={{ marginTop:14, padding:"10px 14px", borderRadius:8,
+                  background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", letterSpacing:1, marginBottom:8 }}>
+                    TESTNET FAUCETS
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    <a href="https://www.alchemy.com/faucets/ethereum-sepolia" target="_blank" rel="noreferrer"
+                      style={{ fontSize:11, fontFamily:"monospace", color:"#627EEA", textDecoration:"none" }}>
+                      🔷 Sepolia ETH Faucet (Alchemy)
+                    </a>
+                    <a href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia" target="_blank" rel="noreferrer"
+                      style={{ fontSize:11, fontFamily:"monospace", color:"#627EEA", textDecoration:"none" }}>
+                      🔷 Sepolia ETH Faucet (Google Cloud)
+                    </a>
+                    <a href="https://midnight.network/test-faucet" target="_blank" rel="noreferrer"
+                      style={{ fontSize:11, fontFamily:"monospace", color:"#a78bfa", textDecoration:"none" }}>
+                      🌙 Midnight tDUST Faucet
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -677,15 +844,31 @@ export default function MidnightVault() {
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <button style={btn("#6366f1")} onClick={() => { pxTimer.current=0; fgTimer.current=0; loadFG(); loadPrices(allSyms); }}>↻ REFRESH</button>
-              <button style={{ padding:"9px 18px", borderRadius:8, border:"1px solid #06b6d4",
-                background:connected?"rgba(6,182,212,0.12)":"transparent",
-                color:connected?"#06b6d4":"#94a3b8", cursor:"pointer", fontSize:12,
+              {connected && chainId && (
+                <div style={{ padding:"6px 12px", borderRadius:8, fontSize:10, fontFamily:"monospace",
+                  background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", color:"#64748b",
+                  display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:6, height:6, borderRadius:"50%", background:
+                    chainId==="0xaa36a7"?"#22c55e":chainId==="0x1"?"#3b82f6":"#eab308" }} />
+                  {getNetworkName(chainId)}
+                  {chainId !== "0xaa36a7" && (
+                    <span style={{ color:"#06b6d4", cursor:"pointer", textDecoration:"underline", marginLeft:4 }}
+                      onClick={switchToSepolia}>Switch</span>
+                  )}
+                </div>
+              )}
+              <button style={{ padding:"9px 18px", borderRadius:8, border:`1px solid ${connected?"#22c55e":"#06b6d4"}`,
+                background:connected?"rgba(34,197,94,0.08)":"transparent",
+                color:connected?"#22c55e":"#94a3b8", cursor:"pointer", fontSize:12,
                 fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:8 }}
-                onClick={handleConnect} disabled={connected||connecting}>
+                onClick={connected ? handleDisconnect : handleConnect} disabled={connecting}>
                 <span style={{ width:7, height:7, borderRadius:"50%", display:"inline-block",
                   background:connected?"#22c55e":connecting?"#eab308":"#475569",
-                  boxShadow:connected?"0 0 8px #22c55e":"none" }} />
-                {connecting?"CONNECTING…":connected?"MIDNIGHT TESTNET":"CONNECT WALLET"}
+                  boxShadow:connected?"0 0 8px #22c55e":"none",
+                  animation:connected?"blink 2s infinite":"none" }} />
+                {connecting ? "CONNECTING…" : connected
+                  ? `${walletAddr.slice(0,6)}…${walletAddr.slice(-4)}`
+                  : "CONNECT WALLET"}
               </button>
             </div>
           </div>
@@ -695,8 +878,8 @@ export default function MidnightVault() {
             {[
               { l:"VAULT VALUE",    v:fmtUSD(totalUSD),                                                                                       c:"#06b6d4" },
               { l:"FEAR & GREED",   v:fg.value!=null?`${fg.value} · ${fgInfo.label}`:fg.status==="loading"?"Loading…":"—",                    c:fgInfo.color },
-              { l:"ACTIVE STRATEGY",v:activeStrat?.name || "—",                                                                               c:"#a78bfa" },
-              { l:"AUTO-INVEST",    v:autoInvest?"ACTIVE":"PAUSED",                                                                           c:autoInvest?"#22c55e":"#ef4444" },
+              { l:"WALLET",         v:connected ? `${walletAddr.slice(0,6)}…${walletAddr.slice(-4)}` : "NOT CONNECTED",                       c:connected?"#22c55e":"#ef4444" },
+              { l:"ETH BALANCE",    v:connected && walletBal != null ? `${walletBal.toFixed(4)} ETH` : "—",                                   c:"#627EEA" },
             ].map(k => (
               <div key={k.l} style={cg(k.c)}>
                 <div style={lbl}>{k.l}</div>
