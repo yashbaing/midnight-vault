@@ -35,45 +35,60 @@ function getAllocForValue(v, strategies, activeStratId) {
   return { action: zone.action, desc: zone.desc || "", btc: zone.btc, eth: zone.eth, sol: zone.sol, other: zone.other };
 }
 
-// Anthropic API
-async function askClaude(prompt) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  const data = await res.json();
-  return data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+// ─── Symbol → CoinGecko ID mapping ───────────────────────────────────────────
+const SYMBOL_TO_CG_ID = {
+  BTC:"bitcoin", ETH:"ethereum", SOL:"solana", AVAX:"avalanche-2",
+  DOT:"polkadot", ADA:"cardano", LINK:"chainlink", MATIC:"matic-network",
+  ATOM:"cosmos", UNI:"uniswap", DOGE:"dogecoin", SHIB:"shiba-inu",
+  XRP:"ripple", LTC:"litecoin", BNB:"binancecoin", TRX:"tron",
+  NEAR:"near", ARB:"arbitrum", OP:"optimism", APT:"aptos",
+  SUI:"sui", SEI:"sei-network", INJ:"injective-protocol", TIA:"celestia",
+  FET:"fetch-ai", RNDR:"render-token", WIF:"dogwifcoin", PEPE:"pepe",
+  FIL:"filecoin", AAVE:"aave", MKR:"maker", CRV:"curve-dao-token",
+};
+
+function getCoinGeckoId(symbol) {
+  return SYMBOL_TO_CG_ID[symbol.toUpperCase()] || symbol.toLowerCase();
 }
 
-async function fetchLivePrices(symbols) {
-  const text = await askClaude(
-    `Search the web for the current live USD price and 24-hour percentage change of these cryptocurrencies: ${symbols.join(", ")}.
-Return ONLY a raw JSON object (no markdown, no backticks), example:
-{"BTC":{"price":68420,"change24h":2.31},"ETH":{"price":3580,"change24h":-0.87}}`
-  );
-  const clean = text.replace(/```json|```/g, "").trim();
-  const s = clean.indexOf("{"), e = clean.lastIndexOf("}");
-  if (s === -1 || e === -1) throw new Error("No JSON");
-  return JSON.parse(clean.slice(s, e + 1));
-}
-
+// ─── Live Fear & Greed Index from alternative.me ─────────────────────────────
 async function fetchLiveFG() {
-  const text = await askClaude(
-    `Search the web for today's Crypto Fear and Greed Index from alternative.me.
-Return ONLY raw JSON (no markdown, no backticks), example:
-{"value":52,"label":"Neutral","history":[42,38,44,51,56,62,58,71,68,63,55,49,52,47,52]}`
+  const res = await fetch("https://api.alternative.me/fng/?limit=16&format=json");
+  if (!res.ok) throw new Error(`FNG API ${res.status}`);
+  const json = await res.json();
+  const entries = json.data;
+  if (!entries || !entries.length) throw new Error("No FNG data");
+  const current = entries[0];
+  // entries[0] = today, entries[1..15] = last 15 days (newest first → reverse for sparkline)
+  const history = entries.slice(1).map(e => Number(e.value)).reverse();
+  return {
+    value: Number(current.value),
+    label: current.value_classification,
+    history,
+  };
+}
+
+// ─── Live Prices from CoinGecko ──────────────────────────────────────────────
+async function fetchLivePrices(symbols) {
+  const ids = symbols.map(getCoinGeckoId).join(",");
+  const res = await fetch(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`
   );
-  const clean = text.replace(/```json|```/g, "").trim();
-  const s = clean.indexOf("{"), e = clean.lastIndexOf("}");
-  if (s === -1 || e === -1) throw new Error("No JSON");
-  return JSON.parse(clean.slice(s, e + 1));
+  if (!res.ok) throw new Error(`CoinGecko API ${res.status}`);
+  const json = await res.json();
+  // Map CoinGecko response back to symbol-keyed format the app expects
+  const result = {};
+  for (const sym of symbols) {
+    const cgId = getCoinGeckoId(sym);
+    const entry = json[cgId];
+    if (entry) {
+      result[sym] = {
+        price: entry.usd ?? null,
+        change24h: entry.usd_24h_change != null ? Math.round(entry.usd_24h_change * 100) / 100 : null,
+      };
+    }
+  }
+  return result;
 }
 
 // ─── UI Atoms ─────────────────────────────────────────────────────────────────
