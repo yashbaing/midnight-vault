@@ -198,7 +198,7 @@ function FGGauge({ value }) {
       <circle cx={cx} cy={cy} r="2.5" fill={info.color} />
       {/* Value text */}
       <text x={cx} y={cy + 28} textAnchor="middle"
-        style={{ fill: info.color, fontSize: 32, fontFamily: "monospace", fontWeight: 800 }}>
+        style={{ fill: info.color, fontSize: 28, fontFamily: "monospace", fontWeight: 800 }}>
         {value ?? "…"}
       </text>
       {/* Label */}
