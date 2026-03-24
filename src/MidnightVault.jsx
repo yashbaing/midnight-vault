@@ -325,6 +325,7 @@ export default function MidnightVault() {
   const [pxTs, setPxTs]       = useState(null);
   const [pxStatus, setPxStatus] = useState("idle");
   const [countdown, setCountdown] = useState({ price:10, fg:30 });
+  const [liveClock, setLiveClock] = useState(new Date().toLocaleTimeString());
 
   const prevZone = useRef(null);
   const allSyms  = [...assets.map(a => a.symbol), ...custom.map(c => c.symbol)];
@@ -382,6 +383,7 @@ export default function MidnightVault() {
   // Master tick — runs every second, drives countdowns + auto-fetch
   useEffect(() => {
     const tick = setInterval(() => {
+      setLiveClock(new Date().toLocaleTimeString());
       if (!isVisible.current) return;
       pxTimer.current -= 1;
       fgTimer.current -= 1;
@@ -674,16 +676,7 @@ export default function MidnightVault() {
               </div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              {/* Live countdown */}
-              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 14px",
-                borderRadius:8, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
-                <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e",
-                  boxShadow:"0 0 8px #22c55e", animation:"blink 1.5s infinite", display:"inline-block" }} />
-                <span style={{ fontSize:10, fontFamily:"monospace", color: countdown.price <= 3 ? "#22c55e" : "#475569" }}>
-                  ↻ {countdown.price}s
-                </span>
-              </div>
-              <button style={btn("#6366f1")} onClick={() => { pxTimer.current=0; fgTimer.current=0; loadFG(); loadPrices(allSyms); }}>↻ NOW</button>
+              <button style={btn("#6366f1")} onClick={() => { pxTimer.current=0; fgTimer.current=0; loadFG(); loadPrices(allSyms); }}>↻ REFRESH</button>
               <button style={{ padding:"9px 18px", borderRadius:8, border:"1px solid #06b6d4",
                 background:connected?"rgba(6,182,212,0.12)":"transparent",
                 color:connected?"#06b6d4":"#94a3b8", cursor:"pointer", fontSize:12,
@@ -737,7 +730,7 @@ export default function MidnightVault() {
                     </span>
                   </div>
                   <StatusDot color={fg.status==="ok"?fgInfo.color:fg.status==="loading"?"#eab308":"#ef4444"}
-                    text={fg.status==="ok"?`LIVE · ${fg.ts}`:fg.status==="loading"?"FETCHING…":"ERROR"} />
+                    text={fg.status==="ok"?`LIVE · ${liveClock}`:fg.status==="loading"?"FETCHING…":"ERROR"} />
                 </div>
 
                 <div style={{ display:"grid", gridTemplateColumns:"230px 1fr", gap:24, alignItems:"start" }}>
@@ -870,7 +863,7 @@ export default function MidnightVault() {
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                     <div style={lbl}>HOLDINGS</div>
                     <StatusDot color={pxStatus==="ok"?"#22c55e":pxStatus==="loading"?"#eab308":"#ef4444"}
-                      text={pxStatus==="ok"?`LIVE · ${pxTs}`:pxStatus==="loading"?"FETCHING…":"ERROR"} />
+                      text={pxStatus==="ok"?`LIVE · ${liveClock}`:pxStatus==="loading"?"FETCHING…":"ERROR"} />
                   </div>
                   <button style={btn("#06b6d4")} onClick={() => setAddMod(true)}>+ ADD COIN</button>
                 </div>
