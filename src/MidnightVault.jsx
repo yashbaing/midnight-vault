@@ -53,18 +53,24 @@ function getCoinGeckoId(symbol) {
 
 // ─── Live Fear & Greed Index from alternative.me ─────────────────────────────
 async function fetchLiveFG() {
-  const res = await fetch("https://api.alternative.me/fng/?limit=16&format=json");
+  const res = await fetch("https://api.alternative.me/fng/?limit=31&format=json");
   if (!res.ok) throw new Error(`FNG API ${res.status}`);
   const json = await res.json();
   const entries = json.data;
   if (!entries || !entries.length) throw new Error("No FNG data");
   const current = entries[0];
+  const yesterday = entries[1] || null;
+  const lastWeek  = entries[7] || null;
+  const lastMonth = entries[30] || entries[entries.length - 1] || null;
   // entries[0] = today, entries[1..15] = last 15 days (newest first → reverse for sparkline)
-  const history = entries.slice(1).map(e => Number(e.value)).reverse();
+  const history = entries.slice(1, 16).map(e => Number(e.value)).reverse();
   return {
     value: Number(current.value),
     label: current.value_classification,
     history,
+    yesterday: yesterday ? { value: Number(yesterday.value), label: yesterday.value_classification } : null,
+    lastWeek:  lastWeek  ? { value: Number(lastWeek.value),  label: lastWeek.value_classification  } : null,
+    lastMonth: lastMonth ? { value: Number(lastMonth.value), label: lastMonth.value_classification } : null,
   };
 }
 
@@ -263,7 +269,7 @@ export default function MidnightVault() {
   const [editingZoneIdx, setEditZone] = useState(0);
 
   // live data
-  const [fg, setFg]           = useState({ value:null, label:null, history:[], ts:null, status:"idle" });
+  const [fg, setFg]           = useState({ value:null, label:null, history:[], yesterday:null, lastWeek:null, lastMonth:null, ts:null, status:"idle" });
   const [prices, setPrices]   = useState({});
   const [pxTs, setPxTs]       = useState(null);
   const [pxStatus, setPxStatus] = useState("idle");
@@ -276,8 +282,12 @@ export default function MidnightVault() {
     setFg(p => ({ ...p, status:"loading" }));
     try {
       const data = await fetchLiveFG();
-      setFg({ value:Number(data.value), label:data.label || getFGInfo(Number(data.value)).label,
-        history:Array.isArray(data.history)?data.history.map(Number):[], ts:new Date().toLocaleTimeString(), status:"ok" });
+      setFg({
+        value:Number(data.value), label:data.label || getFGInfo(Number(data.value)).label,
+        history:Array.isArray(data.history)?data.history.map(Number):[],
+        yesterday: data.yesterday, lastWeek: data.lastWeek, lastMonth: data.lastMonth,
+        ts:new Date().toLocaleTimeString(), status:"ok"
+      });
     } catch { setFg(p => ({ ...p, status:"error" })); }
   }, []);
 
@@ -621,32 +631,127 @@ export default function MidnightVault() {
           {tab === "vault" && (
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
 
-              {/* F&G gauge */}
-              <div style={cg(fgInfo.color)}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                  <div style={lbl}>FEAR &amp; GREED INDEX</div>
+              {/* F&G gauge — full-width redesign */}
+              <div style={{ ...cg(fgInfo.color), gridColumn:"span 2" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={lbl}>FEAR &amp; GREED INDEX</div>
+                    <span style={{ fontSize:9, color:"#475569", fontFamily:"monospace", padding:"2px 8px",
+                      borderRadius:20, border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.03)" }}>
+                      via alternative.me
+                    </span>
+                  </div>
                   <StatusDot color={fg.status==="ok"?fgInfo.color:fg.status==="loading"?"#eab308":"#ef4444"}
                     text={fg.status==="ok"?`LIVE · ${fg.ts}`:fg.status==="loading"?"FETCHING…":"ERROR"} />
                 </div>
-                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <FGGauge value={fg.value} />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", marginBottom:5 }}>15-DAY HISTORY</div>
-                    <Sparkline data={fg.history} color={fgInfo.color} w={140} h={44} />
-                    <div style={{ marginTop:10, padding:"8px 12px", borderRadius:8,
-                      background:fgInfo.bg, border:`1px solid ${fgInfo.color}30` }}>
-                      <div style={{ fontSize:10, color:fgInfo.color, fontFamily:"monospace", marginBottom:2 }}>SIGNAL</div>
-                      <div style={{ fontSize:13, fontWeight:700 }}>{activeAlloc.action}</div>
+
+                <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:24, alignItems:"start" }}>
+                  {/* Left: Gauge + Current value */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
+                    <FGGauge value={fg.value} />
+                    <div style={{ marginTop:8, padding:"8px 18px", borderRadius:10,
+                      background:fgInfo.bg, border:`1px solid ${fgInfo.color}35`,
+                      textAlign:"center", width:"100%" }}>
+                      <div style={{ fontSize:9, color:fgInfo.color, fontFamily:"monospace", letterSpacing:2, marginBottom:2 }}>NOW</div>
+                      <div style={{ fontSize:16, fontWeight:800, color:fgInfo.color }}>{fgInfo.label}</div>
                     </div>
-                    <div style={{ marginTop:7, fontSize:10, color:"#1e2a3a", fontFamily:"monospace" }}>
-                      via alternative.me/fng
+                  </div>
+
+                  {/* Right: Historical + Sparkline + Signal */}
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+
+                    {/* Historical Values Row */}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+                      {[
+                        { label:"YESTERDAY", data: fg.yesterday },
+                        { label:"LAST WEEK", data: fg.lastWeek },
+                        { label:"LAST MONTH", data: fg.lastMonth },
+                      ].map(item => {
+                        const info = item.data ? getFGInfo(item.data.value) : { label:"—", color:"#475569", bg:"rgba(100,116,139,0.08)" };
+                        const val  = item.data?.value;
+                        const diff = (fg.value != null && val != null) ? fg.value - val : null;
+                        return (
+                          <div key={item.label} style={{
+                            padding:"12px 14px", borderRadius:10,
+                            background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)",
+                            position:"relative", overflow:"hidden"
+                          }}>
+                            {/* Subtle accent line at top */}
+                            <div style={{ position:"absolute", top:0, left:0, right:0, height:2,
+                              background:`linear-gradient(90deg, ${info.color}80, transparent)` }} />
+                            <div style={{ fontSize:9, letterSpacing:2, color:"#475569", fontFamily:"monospace", marginBottom:8 }}>
+                              {item.label}
+                            </div>
+                            <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:4 }}>
+                              <span style={{ fontSize:26, fontWeight:800, fontFamily:"monospace", color:info.color,
+                                textShadow:`0 0 14px ${info.color}40` }}>
+                                {val ?? "—"}
+                              </span>
+                              {diff != null && (
+                                <span style={{ fontSize:11, fontWeight:700, fontFamily:"monospace",
+                                  color: diff > 0 ? "#22c55e" : diff < 0 ? "#ef4444" : "#475569",
+                                  display:"flex", alignItems:"center", gap:2,
+                                  padding:"2px 7px", borderRadius:6,
+                                  background: diff > 0 ? "rgba(34,197,94,0.1)" : diff < 0 ? "rgba(239,68,68,0.1)" : "rgba(100,116,139,0.08)",
+                                }}>
+                                  {diff > 0 ? "▲" : diff < 0 ? "▼" : "="}{Math.abs(diff)}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize:11, fontWeight:700, color:info.color }}>
+                              {item.data?.label || info.label}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+
+                    {/* Sparkline + Signal row */}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                      {/* Sparkline */}
+                      <div style={{ padding:"12px 14px", borderRadius:10,
+                        background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)" }}>
+                        <div style={{ fontSize:9, letterSpacing:2, color:"#475569", fontFamily:"monospace", marginBottom:8 }}>
+                          15-DAY TREND
+                        </div>
+                        <Sparkline data={fg.history} color={fgInfo.color} w={220} h={48} />
+                        <div style={{ display:"flex", justifyContent:"space-between", marginTop:6,
+                          fontSize:9, color:"#334155", fontFamily:"monospace" }}>
+                          <span>15d ago</span>
+                          <span>Today</span>
+                        </div>
+                      </div>
+                      {/* Signal */}
+                      <div style={{ padding:"12px 14px", borderRadius:10,
+                        background:fgInfo.bg, border:`1px solid ${fgInfo.color}25`,
+                        display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+                        <div>
+                          <div style={{ fontSize:9, letterSpacing:2, color:fgInfo.color, fontFamily:"monospace", marginBottom:6 }}>
+                            STRATEGY SIGNAL
+                          </div>
+                          <div style={{ fontSize:20, fontWeight:800, color:fgInfo.color, marginBottom:4 }}>
+                            {activeAlloc.action}
+                          </div>
+                          <div style={{ fontSize:11, color:"#64748b", fontFamily:"monospace", lineHeight:1.5 }}>
+                            {activeAlloc.desc || "Auto-rebalancing based on current market sentiment zone."}
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10 }}>
+                          <div style={{ width:6, height:6, borderRadius:"50%", background:fgInfo.color,
+                            boxShadow:`0 0 8px ${fgInfo.color}`, animation:"blink 2s infinite" }} />
+                          <span style={{ fontSize:9, color:"#475569", fontFamily:"monospace" }}>
+                            {activeStrat?.name} · Zone {fg.value != null ? zoneOf(fg.value) + 1 : "—"}/5
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </div>
 
               {/* Allocation */}
-              <div style={card}>
+              <div style={{ ...card, gridColumn:"span 2" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
                   <div style={lbl}>ALLOCATION · {activeStrat?.name?.toUpperCase()}</div>
                   <span style={{ fontSize:10, color:"#a78bfa", fontFamily:"monospace", padding:"2px 8px",
