@@ -324,9 +324,14 @@ export default function MidnightVault() {
   const [prices, setPrices]   = useState({});
   const [pxTs, setPxTs]       = useState(null);
   const [pxStatus, setPxStatus] = useState("idle");
+  const [countdown, setCountdown] = useState({ price:30, fg:60 });
+  const [clock, setClock]     = useState(new Date().toLocaleTimeString());
 
   const prevZone = useRef(null);
   const allSyms  = [...assets.map(a => a.symbol), ...custom.map(c => c.symbol)];
+  const pxTimer  = useRef(30);
+  const fgTimer  = useRef(60);
+  const isVisible = useRef(true);
 
   // ── Data fetching ─────────────────────────────────────────────────────────
   const loadFG = useCallback(async () => {
@@ -339,7 +344,11 @@ export default function MidnightVault() {
         yesterday: data.yesterday, lastWeek: data.lastWeek, lastMonth: data.lastMonth,
         ts:new Date().toLocaleTimeString(), status:"ok"
       });
-    } catch { setFg(p => ({ ...p, status:"error" })); }
+      fgTimer.current = 60;
+    } catch {
+      setFg(p => ({ ...p, status:"error" }));
+      fgTimer.current = 15; // retry faster on error
+    }
   }, []);
 
   const loadPrices = useCallback(async (syms) => {
@@ -348,14 +357,42 @@ export default function MidnightVault() {
     try {
       const data = await fetchLivePrices(syms);
       setPrices(data); setPxTs(new Date().toLocaleTimeString()); setPxStatus("ok");
-    } catch { setPxStatus("error"); }
+      pxTimer.current = 30;
+    } catch {
+      setPxStatus("error");
+      pxTimer.current = 10; // retry faster on error
+    }
   }, []);
 
+  // Initial load
   useEffect(() => { loadFG(); loadPrices(allSyms); }, []);
+
+  // Visibility API — pause when tab hidden, resume when visible
   useEffect(() => {
-    const iv = setInterval(() => { loadFG(); loadPrices(allSyms); }, 5*60*1000);
-    return () => clearInterval(iv);
+    const onVis = () => {
+      isVisible.current = !document.hidden;
+      if (!document.hidden) {
+        // immediately refresh when user comes back
+        loadFG(); loadPrices(allSyms);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [allSyms.join(",")]);
+
+  // Master tick — runs every second, drives countdowns + auto-fetch
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setClock(new Date().toLocaleTimeString());
+      if (!isVisible.current) return;
+      pxTimer.current -= 1;
+      fgTimer.current -= 1;
+      setCountdown({ price: Math.max(0, pxTimer.current), fg: Math.max(0, fgTimer.current) });
+      if (pxTimer.current <= 0) { pxTimer.current = 30; loadPrices(allSyms); }
+      if (fgTimer.current <= 0) { fgTimer.current = 60; loadFG(); }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [allSyms.join(","), loadFG, loadPrices]);
 
   // auto-rebalance
   useEffect(() => {
@@ -634,12 +671,23 @@ export default function MidnightVault() {
                   MIDNIGHT VAULT
                 </div>
                 <div style={{ fontSize:10, color:"#334155", letterSpacing:2, fontFamily:"monospace" }}>
-                  TESTNET · COMPACT ZK · LIVE DATA
+                  TESTNET · COMPACT ZK · REAL-TIME
                 </div>
               </div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <button style={btn("#6366f1")} onClick={() => { loadFG(); loadPrices(allSyms); }}>↻ REFRESH</button>
+              {/* Live clock + countdown */}
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 14px",
+                borderRadius:8, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
+                <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e",
+                  boxShadow:"0 0 8px #22c55e", animation:"blink 1.5s infinite", display:"inline-block" }} />
+                <span style={{ fontSize:11, fontFamily:"monospace", color:"#64748b" }}>{clock}</span>
+                <span style={{ width:1, height:14, background:"rgba(255,255,255,0.1)" }} />
+                <span style={{ fontSize:10, fontFamily:"monospace", color: countdown.price <= 5 ? "#22c55e" : "#475569" }}>
+                  ↻ {countdown.price}s
+                </span>
+              </div>
+              <button style={btn("#6366f1")} onClick={() => { pxTimer.current=0; fgTimer.current=0; loadFG(); loadPrices(allSyms); }}>↻ NOW</button>
               <button style={{ padding:"9px 18px", borderRadius:8, border:"1px solid #06b6d4",
                 background:connected?"rgba(6,182,212,0.12)":"transparent",
                 color:connected?"#06b6d4":"#94a3b8", cursor:"pointer", fontSize:12,
@@ -1163,6 +1211,8 @@ export default function MidnightVault() {
         @keyframes slideIn { from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)} }
         @keyframes spin    { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
         @keyframes blink   { 0%,100%{opacity:1}50%{opacity:0.3} }
+        @keyframes pulse   { 0%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)} }
+        @keyframes fadeIn  { from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)} }
         * { box-sizing:border-box; }
         button:hover { opacity:0.82; }
         textarea { font-family:monospace; color:#e2e8f0; }
