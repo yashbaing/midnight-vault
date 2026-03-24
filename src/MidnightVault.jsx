@@ -324,12 +324,12 @@ export default function MidnightVault() {
   const [prices, setPrices]   = useState({});
   const [pxTs, setPxTs]       = useState(null);
   const [pxStatus, setPxStatus] = useState("idle");
-  const [countdown, setCountdown] = useState({ price:30, fg:60 });
+  const [countdown, setCountdown] = useState({ price:10, fg:30 });
 
   const prevZone = useRef(null);
   const allSyms  = [...assets.map(a => a.symbol), ...custom.map(c => c.symbol)];
-  const pxTimer  = useRef(30);
-  const fgTimer  = useRef(60);
+  const pxTimer  = useRef(10);
+  const fgTimer  = useRef(30);
   const isVisible = useRef(true);
 
   // ── Data fetching ─────────────────────────────────────────────────────────
@@ -343,10 +343,10 @@ export default function MidnightVault() {
         yesterday: data.yesterday, lastWeek: data.lastWeek, lastMonth: data.lastMonth,
         ts:new Date().toLocaleTimeString(), status:"ok"
       });
-      fgTimer.current = 60;
+      fgTimer.current = 30;
     } catch {
       setFg(p => ({ ...p, status:"error" }));
-      fgTimer.current = 15; // retry faster on error
+      fgTimer.current = 10; // retry faster on error
     }
   }, []);
 
@@ -356,10 +356,10 @@ export default function MidnightVault() {
     try {
       const data = await fetchLivePrices(syms);
       setPrices(data); setPxTs(new Date().toLocaleTimeString()); setPxStatus("ok");
-      pxTimer.current = 30;
+      pxTimer.current = 10;
     } catch {
       setPxStatus("error");
-      pxTimer.current = 10; // retry faster on error
+      pxTimer.current = 5; // retry faster on error
     }
   }, []);
 
@@ -386,8 +386,8 @@ export default function MidnightVault() {
       pxTimer.current -= 1;
       fgTimer.current -= 1;
       setCountdown({ price: Math.max(0, pxTimer.current), fg: Math.max(0, fgTimer.current) });
-      if (pxTimer.current <= 0) { pxTimer.current = 30; loadPrices(allSyms); }
-      if (fgTimer.current <= 0) { fgTimer.current = 60; loadFG(); }
+      if (pxTimer.current <= 0) { pxTimer.current = 10; loadPrices(allSyms); }
+      if (fgTimer.current <= 0) { fgTimer.current = 30; loadFG(); }
     }, 1000);
     return () => clearInterval(tick);
   }, [allSyms.join(","), loadFG, loadPrices]);
@@ -679,7 +679,7 @@ export default function MidnightVault() {
                 borderRadius:8, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
                 <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e",
                   boxShadow:"0 0 8px #22c55e", animation:"blink 1.5s infinite", display:"inline-block" }} />
-                <span style={{ fontSize:10, fontFamily:"monospace", color: countdown.price <= 5 ? "#22c55e" : "#475569" }}>
+                <span style={{ fontSize:10, fontFamily:"monospace", color: countdown.price <= 3 ? "#22c55e" : "#475569" }}>
                   ↻ {countdown.price}s
                 </span>
               </div>
