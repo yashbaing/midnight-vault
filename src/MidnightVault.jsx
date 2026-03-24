@@ -123,37 +123,88 @@ function Sparkline({ data, color, w = 110, h = 36 }) {
 function FGGauge({ value }) {
   const info  = getFGInfo(value);
   const toRad = d => (d * Math.PI) / 180;
-  const arc   = (s, e, r) => {
-    const S = { x: 100 + r * Math.cos(toRad(s)), y: 100 + r * Math.sin(toRad(s)) };
-    const E = { x: 100 + r * Math.cos(toRad(e)), y: 100 + r * Math.sin(toRad(e)) };
-    return `M ${S.x} ${S.y} A ${r} ${r} 0 ${e - s > 180 ? 1 : 0} 1 ${E.x} ${E.y}`;
+  // Center & radius
+  const cx = 100, cy = 92, r = 76, nr = 60;
+  // Arc from 135° (bottom-left) clockwise through top to 45° (bottom-right) = 270° sweep
+  // In SVG: 0°=right, 90°=down, 180°=left, 270°=up
+  const START = 135, SWEEP = 270;
+  const arc = (s, e, rad) => {
+    const S = { x: cx + rad * Math.cos(toRad(s)), y: cy + rad * Math.sin(toRad(s)) };
+    const E = { x: cx + rad * Math.cos(toRad(e)), y: cy + rad * Math.sin(toRad(e)) };
+    const diff = e - s;
+    return `M ${S.x} ${S.y} A ${rad} ${rad} 0 ${diff > 180 ? 1 : 0} 1 ${E.x} ${E.y}`;
   };
-  const angle = value == null ? -140 : -140 + (value / 100) * 280;
-  const nx = 100 + 68 * Math.cos(toRad(angle));
-  const ny = 100 + 68 * Math.sin(toRad(angle));
+  // Needle angle: 0→135° (bottom-left), 100→405°/45° (bottom-right)
+  const angle = value == null ? START : START + (value / 100) * SWEEP;
+  const nx = cx + nr * Math.cos(toRad(angle));
+  const ny = cy + nr * Math.sin(toRad(angle));
+  // 5 segments, each 54°
   const segs = [
-    { s:-140,e:-84,c:"#ef4444" },{ s:-84,e:-28,c:"#f97316" },
-    { s:-28, e: 28,c:"#eab308" },{ s: 28,e: 84,c:"#22c55e" },
-    { s: 84, e:140,c:"#06b6d4" },
+    { s:135, e:189, c:"#ef4444" }, // Extreme Fear (lower-left → left)
+    { s:189, e:243, c:"#f97316" }, // Fear (left → upper-left)
+    { s:243, e:297, c:"#eab308" }, // Neutral (upper-left → upper-right)
+    { s:297, e:351, c:"#22c55e" }, // Greed (upper-right → right)
+    { s:351, e:405, c:"#06b6d4" }, // Extreme Greed (right → lower-right)
   ];
+  // Tick marks at 0, 25, 50, 75, 100
+  const ticks = [0, 25, 50, 75, 100].map(v => {
+    const a = START + (v / 100) * SWEEP;
+    return {
+      v,
+      x1: cx + (r + 6) * Math.cos(toRad(a)),
+      y1: cy + (r + 6) * Math.sin(toRad(a)),
+      x2: cx + (r + 12) * Math.cos(toRad(a)),
+      y2: cy + (r + 12) * Math.sin(toRad(a)),
+      tx: cx + (r + 22) * Math.cos(toRad(a)),
+      ty: cy + (r + 22) * Math.sin(toRad(a)),
+    };
+  });
   return (
-    <svg viewBox="0 0 200 130" style={{ width: "100%", maxWidth: 200 }}>
+    <svg viewBox="0 0 200 160" style={{ width: "100%", maxWidth: 220 }}>
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      {/* Background segments */}
       {segs.map((s, i) => (
-        <path key={i} d={arc(s.s, s.e, 80)} fill="none"
-          stroke={s.c} strokeWidth="10" strokeLinecap="round" opacity="0.2" />
+        <path key={i} d={arc(s.s, s.e, r)} fill="none"
+          stroke={s.c} strokeWidth="14" strokeLinecap="round" opacity="0.15" />
       ))}
+      {/* Active arc */}
       {value != null && (
-        <path d={arc(-140, angle, 80)} fill="none"
-          stroke={info.color} strokeWidth="10" strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 6px ${info.color})` }} />
+        <path d={arc(START, angle, r)} fill="none"
+          stroke={info.color} strokeWidth="14" strokeLinecap="round"
+          filter="url(#glow)" />
       )}
-      <line x1="100" y1="100" x2={nx} y2={ny}
+      {/* Tick marks */}
+      {ticks.map(t => (
+        <g key={t.v}>
+          <line x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+            stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
+          <text x={t.tx} y={t.ty} textAnchor="middle" dominantBaseline="middle"
+            style={{ fill:"rgba(255,255,255,0.2)", fontSize:9, fontFamily:"monospace" }}>
+            {t.v}
+          </text>
+        </g>
+      ))}
+      {/* Needle */}
+      <line x1={cx} y1={cy} x2={nx} y2={ny}
         stroke={info.color} strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx="100" cy="100" r="5" fill={info.color}
-        style={{ filter: `drop-shadow(0 0 6px ${info.color})` }} />
-      <text x="100" y="128" textAnchor="middle"
-        style={{ fill: info.color, fontSize: 26, fontFamily: "monospace", fontWeight: 700 }}>
+      {/* Center dot */}
+      <circle cx={cx} cy={cy} r="6" fill="#0c1220" stroke={info.color} strokeWidth="2"
+        filter="url(#glow)" />
+      <circle cx={cx} cy={cy} r="2.5" fill={info.color} />
+      {/* Value text */}
+      <text x={cx} y={cy + 28} textAnchor="middle"
+        style={{ fill: info.color, fontSize: 32, fontFamily: "monospace", fontWeight: 800 }}>
         {value ?? "…"}
+      </text>
+      {/* Label */}
+      <text x={cx} y={cy + 42} textAnchor="middle"
+        style={{ fill: info.color, fontSize: 10, fontFamily: "monospace", letterSpacing: 2, opacity: 0.7 }}>
+        {info.label.toUpperCase()}
       </text>
     </svg>
   );
@@ -645,16 +696,10 @@ export default function MidnightVault() {
                     text={fg.status==="ok"?`LIVE · ${fg.ts}`:fg.status==="loading"?"FETCHING…":"ERROR"} />
                 </div>
 
-                <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:24, alignItems:"start" }}>
-                  {/* Left: Gauge + Current value */}
+                <div style={{ display:"grid", gridTemplateColumns:"230px 1fr", gap:24, alignItems:"start" }}>
+                  {/* Left: Gauge */}
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
                     <FGGauge value={fg.value} />
-                    <div style={{ marginTop:8, padding:"8px 18px", borderRadius:10,
-                      background:fgInfo.bg, border:`1px solid ${fgInfo.color}35`,
-                      textAlign:"center", width:"100%" }}>
-                      <div style={{ fontSize:9, color:fgInfo.color, fontFamily:"monospace", letterSpacing:2, marginBottom:2 }}>NOW</div>
-                      <div style={{ fontSize:16, fontWeight:800, color:fgInfo.color }}>{fgInfo.label}</div>
-                    </div>
                   </div>
 
                   {/* Right: Historical + Sparkline + Signal */}
