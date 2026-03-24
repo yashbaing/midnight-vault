@@ -325,7 +325,6 @@ export default function MidnightVault() {
   const [pxTs, setPxTs]       = useState(null);
   const [pxStatus, setPxStatus] = useState("idle");
   const [countdown, setCountdown] = useState({ price:30, fg:60 });
-  const [clock, setClock]     = useState(new Date().toLocaleTimeString());
 
   const prevZone = useRef(null);
   const allSyms  = [...assets.map(a => a.symbol), ...custom.map(c => c.symbol)];
@@ -383,7 +382,6 @@ export default function MidnightVault() {
   // Master tick — runs every second, drives countdowns + auto-fetch
   useEffect(() => {
     const tick = setInterval(() => {
-      setClock(new Date().toLocaleTimeString());
       if (!isVisible.current) return;
       pxTimer.current -= 1;
       fgTimer.current -= 1;
@@ -676,13 +674,11 @@ export default function MidnightVault() {
               </div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              {/* Live clock + countdown */}
+              {/* Live countdown */}
               <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 14px",
                 borderRadius:8, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)" }}>
                 <span style={{ width:6, height:6, borderRadius:"50%", background:"#22c55e",
                   boxShadow:"0 0 8px #22c55e", animation:"blink 1.5s infinite", display:"inline-block" }} />
-                <span style={{ fontSize:11, fontFamily:"monospace", color:"#64748b" }}>{clock}</span>
-                <span style={{ width:1, height:14, background:"rgba(255,255,255,0.1)" }} />
                 <span style={{ fontSize:10, fontFamily:"monospace", color: countdown.price <= 5 ? "#22c55e" : "#475569" }}>
                   ↻ {countdown.price}s
                 </span>
