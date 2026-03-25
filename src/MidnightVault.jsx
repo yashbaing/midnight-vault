@@ -709,27 +709,29 @@ export default function MidnightVault() {
   const activeStrat = strategies.find(s => s.id === activeStratId) || strategies[0];
 
   // ── Shared style helpers ──────────────────────────────────────────────────
-  const card  = { background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, padding:20 };
-  const cg    = c => ({ ...card, border:`1px solid ${c}35`, boxShadow:`0 0 18px ${c}0a` });
-  const lbl   = { fontSize:10, letterSpacing:2, color:"#475569", fontFamily:"monospace", marginBottom:6 };
-  const tabSt = a => ({ flex:1, padding:"9px 0", borderRadius:7, border:"none",
-    background: a?"rgba(6,182,212,0.15)":"transparent", color:a?"#06b6d4":"#64748b",
-    cursor:"pointer", fontSize:12, fontWeight:700, letterSpacing:1, transition:"all 0.2s" });
+  const card  = { background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)",
+    borderRadius:16, padding:22, backdropFilter:"blur(12px)", transition:"all 0.3s ease" };
+  const cg    = c => ({ ...card, border:`1px solid ${c}30`, boxShadow:`0 0 24px ${c}08, inset 0 1px 0 rgba(255,255,255,0.04)` });
+  const lbl   = { fontSize:9, letterSpacing:2.5, color:"#475569", fontFamily:"'JetBrains Mono',monospace", marginBottom:8, textTransform:"uppercase" };
+  const tabSt = a => ({ flex:1, padding:"10px 0", borderRadius:8, border:"none",
+    background: a?"rgba(167,139,250,0.12)":"transparent", color:a?"#a78bfa":"#475569",
+    cursor:"pointer", fontSize:11, fontWeight:700, letterSpacing:1.5, transition:"all 0.25s",
+    fontFamily:"'JetBrains Mono',monospace" });
   const btn   = (c, full=false) => ({
-    background:`${c}18`, border:`1px solid ${c}55`, borderRadius:8,
-    color:c, cursor:"pointer", fontSize:12, fontFamily:"monospace",
-    padding:"9px 18px", letterSpacing:1, transition:"all 0.2s",
-    width: full?"100%":"auto",
+    background:`${c}12`, border:`1px solid ${c}40`, borderRadius:10,
+    color:c, cursor:"pointer", fontSize:11, fontFamily:"'JetBrains Mono',monospace",
+    padding:"9px 18px", letterSpacing:1, transition:"all 0.25s ease",
+    width: full?"100%":"auto", fontWeight:600,
   });
-  const inp   = { width:"100%", background:"rgba(255,255,255,0.05)",
-    border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"10px 14px",
-    color:"#e2e8f0", fontSize:14, fontFamily:"monospace", outline:"none",
-    boxSizing:"border-box", marginBottom:10 };
-  const ov    = { position:"fixed", inset:0, background:"rgba(0,0,0,0.8)",
-    backdropFilter:"blur(6px)", zIndex:100, display:"flex",
+  const inp   = { width:"100%", background:"rgba(255,255,255,0.04)",
+    border:"1px solid rgba(255,255,255,0.08)", borderRadius:10, padding:"11px 16px",
+    color:"#e2e8f0", fontSize:14, fontFamily:"'JetBrains Mono',monospace", outline:"none",
+    boxSizing:"border-box", marginBottom:10, transition:"border-color 0.2s" };
+  const ov    = { position:"fixed", inset:0, background:"rgba(2,4,12,0.85)",
+    backdropFilter:"blur(10px)", zIndex:100, display:"flex",
     alignItems:"center", justifyContent:"center" };
-  const mod   = { background:"#0c1220", border:"1px solid rgba(6,182,212,0.35)",
-    borderRadius:16, padding:28, width:340, boxShadow:"0 0 40px rgba(6,182,212,0.15)" };
+  const mod   = { background:"#0a0f1e", border:"1px solid rgba(167,139,250,0.2)",
+    borderRadius:20, padding:28, width:380, boxShadow:"0 25px 80px rgba(0,0,0,0.5), 0 0 40px rgba(167,139,250,0.06)" };
 
   const TABS = [
     ["vault","⬡ VAULT"],
@@ -740,28 +742,32 @@ export default function MidnightVault() {
 
   return (
     <>
-      <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 
-      <div style={{ minHeight:"100vh", background:"#050810", color:"#e2e8f0",
+      <div style={{ minHeight:"100vh", background:"#030711", color:"#e2e8f0",
         fontFamily:"'Syne',sans-serif", position:"relative", overflow:"hidden" }}>
 
-        {/* BG */}
+        {/* BG — refined grid + animated orbs */}
         <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none",
-          backgroundImage:`linear-gradient(rgba(6,182,212,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(6,182,212,0.04) 1px,transparent 1px)`,
-          backgroundSize:"48px 48px" }} />
-        <div style={{ position:"fixed", top:-200, left:-200, width:600, height:600,
-          borderRadius:"50%", zIndex:0, pointerEvents:"none",
-          background:"radial-gradient(circle,rgba(6,182,212,0.08) 0%,transparent 70%)" }} />
-        <div style={{ position:"fixed", bottom:-150, right:-150, width:500, height:500,
-          borderRadius:"50%", zIndex:0, pointerEvents:"none",
-          background:"radial-gradient(circle,rgba(153,69,255,0.08) 0%,transparent 70%)" }} />
+          backgroundImage:`linear-gradient(rgba(167,139,250,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(167,139,250,0.03) 1px,transparent 1px)`,
+          backgroundSize:"60px 60px" }} />
+        <div style={{ position:"fixed", top:-250, left:-200, width:700, height:700,
+          borderRadius:"50%", zIndex:0, pointerEvents:"none", animation:"float 20s ease-in-out infinite",
+          background:"radial-gradient(circle,rgba(167,139,250,0.07) 0%,transparent 65%)" }} />
+        <div style={{ position:"fixed", bottom:-200, right:-150, width:600, height:600,
+          borderRadius:"50%", zIndex:0, pointerEvents:"none", animation:"float 25s ease-in-out infinite reverse",
+          background:"radial-gradient(circle,rgba(6,182,212,0.06) 0%,transparent 65%)" }} />
+        <div style={{ position:"fixed", top:"40%", left:"60%", width:400, height:400,
+          borderRadius:"50%", zIndex:0, pointerEvents:"none", animation:"float 30s ease-in-out infinite 5s",
+          background:"radial-gradient(circle,rgba(249,115,22,0.04) 0%,transparent 65%)" }} />
 
         {/* Toast */}
         {toast && (
-          <div style={{ position:"fixed", top:18, right:18, zIndex:200,
-            background:"rgba(6,182,212,0.18)", border:"1px solid #06b6d440",
-            borderRadius:10, padding:"11px 20px", fontSize:13,
-            fontFamily:"monospace", color:"#06b6d4", animation:"slideIn 0.3s ease" }}>
+          <div style={{ position:"fixed", top:20, right:20, zIndex:200,
+            background:"rgba(167,139,250,0.12)", border:"1px solid rgba(167,139,250,0.25)",
+            borderRadius:14, padding:"12px 22px", fontSize:13, backdropFilter:"blur(16px)",
+            fontFamily:"'JetBrains Mono',monospace", color:"#a78bfa", animation:"slideIn 0.4s cubic-bezier(0.16,1,0.3,1)",
+            boxShadow:"0 8px 32px rgba(0,0,0,0.3), 0 0 20px rgba(167,139,250,0.08)" }}>
             {toast}
           </div>
         )}
@@ -1116,19 +1122,20 @@ export default function MidnightVault() {
         <div style={{ position:"relative", zIndex:1, maxWidth:1140, margin:"0 auto", padding:"22px 18px" }}>
 
           {/* Header */}
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:22 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-              <div style={{ width:42, height:42, borderRadius:11,
-                background:"linear-gradient(135deg,#06b6d4,#9945FF)",
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ width:44, height:44, borderRadius:12,
+                background:"linear-gradient(135deg,#a78bfa,#06b6d4)",
                 display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:22, boxShadow:"0 0 22px rgba(6,182,212,0.4)" }}>⬡</div>
+                fontSize:22, boxShadow:"0 0 28px rgba(167,139,250,0.35), 0 4px 12px rgba(0,0,0,0.3)" }}>⬡</div>
               <div>
-                <div style={{ fontSize:21, fontWeight:800,
-                  background:"linear-gradient(90deg,#06b6d4,#a78bfa)",
+                <div style={{ fontSize:22, fontWeight:800, letterSpacing:-0.5,
+                  background:"linear-gradient(90deg,#a78bfa,#06b6d4,#a78bfa)",
+                  backgroundSize:"200% auto", animation:"shimmer 3s linear infinite",
                   WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
                   MIDNIGHT VAULT
                 </div>
-                <div style={{ fontSize:10, color:"#334155", letterSpacing:2, fontFamily:"monospace" }}>
+                <div style={{ fontSize:9, color:"#334155", letterSpacing:3, fontFamily:"'JetBrains Mono',monospace", marginTop:2 }}>
                   TESTNET · COMPACT ZK · REAL-TIME
                 </div>
               </div>
@@ -1165,25 +1172,34 @@ export default function MidnightVault() {
           </div>
 
           {/* KPIs */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))", gap:12, marginBottom:18 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:14, marginBottom:20 }}>
             {[
-              { l:"VAULT VALUE",    v:fmtUSD(totalUSD),                                                                                       c:"#06b6d4" },
-              { l:"FEAR & GREED",   v:fg.value!=null?`${fg.value} · ${fgInfo.label}`:fg.status==="loading"?"Loading…":"—",                    c:fgInfo.color },
-              { l:"WALLET",         v:connected ? `${walletAddr.slice(0,6)}…${walletAddr.slice(-4)}` : "NOT CONNECTED",                       c:connected?"#22c55e":"#ef4444" },
-              { l:"ETH BALANCE",    v:connected && walletBal != null ? `${walletBal.toFixed(4)} ETH` : "—",                                   c:"#627EEA" },
-            ].map(k => (
-              <div key={k.l} style={cg(k.c)}>
-                <div style={lbl}>{k.l}</div>
-                <div style={{ fontSize:15, fontWeight:800, color:k.c, fontFamily:"monospace",
-                  wordBreak:"break-word", textShadow:`0 0 10px ${k.c}50` }}>{k.v}</div>
+              { l:"VAULT VALUE",    v:fmtUSD(totalUSD),                                                                                       c:"#06b6d4", icon:"◆" },
+              { l:"FEAR & GREED",   v:fg.value!=null?`${fg.value} · ${fgInfo.label}`:fg.status==="loading"?"Loading…":"—",                    c:fgInfo.color, icon:"◈" },
+              { l:"WALLET",         v:connected ? `${walletAddr.slice(0,6)}…${walletAddr.slice(-4)}` : "NOT CONNECTED",                       c:connected?"#22c55e":"#ef4444", icon:"⬡" },
+              { l:"ETH BALANCE",    v:connected && walletBal != null ? `${walletBal.toFixed(4)} ETH` : "—",                                   c:"#627EEA", icon:"◇" },
+            ].map((k,i) => (
+              <div key={k.l} style={{ ...cg(k.c), position:"relative", overflow:"hidden",
+                animation:`fadeIn 0.4s ease ${i*0.08}s both` }}>
+                {/* Accent top line */}
+                <div style={{ position:"absolute", top:0, left:0, right:0, height:2,
+                  background:`linear-gradient(90deg, ${k.c}60, transparent)` }} />
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                  <div>
+                    <div style={lbl}>{k.l}</div>
+                    <div style={{ fontSize:15, fontWeight:800, color:k.c, fontFamily:"'JetBrains Mono',monospace",
+                      wordBreak:"break-word", textShadow:`0 0 16px ${k.c}40` }}>{k.v}</div>
+                  </div>
+                  <span style={{ fontSize:18, color:`${k.c}20`, marginTop:-2 }}>{k.icon}</span>
+                </div>
               </div>
             ))}
           </div>
 
           {/* Tabs */}
-          <div style={{ display:"flex", gap:4, marginBottom:18,
-            background:"rgba(255,255,255,0.03)", borderRadius:10, padding:4,
-            border:"1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ display:"flex", gap:3, marginBottom:20,
+            background:"rgba(255,255,255,0.02)", borderRadius:12, padding:4,
+            border:"1px solid rgba(255,255,255,0.05)", backdropFilter:"blur(8px)" }}>
             {TABS.map(([id,lb]) => (
               <button key={id} style={tabSt(tab===id)} onClick={() => setTab(id)}>{lb}</button>
             ))}
@@ -1668,24 +1684,34 @@ export default function MidnightVault() {
             </div>
           )}
 
-          <div style={{ marginTop:20, textAlign:"center", fontSize:10,
-            color:"#1a2233", fontFamily:"monospace", letterSpacing:2 }}>
+          <div style={{ marginTop:32, textAlign:"center", fontSize:9, padding:"16px 0",
+            borderTop:"1px solid rgba(255,255,255,0.03)",
+            color:"#1e293b", fontFamily:"'JetBrains Mono',monospace", letterSpacing:3 }}>
             MIDNIGHT VAULT · TESTNET ONLY · NOT FINANCIAL ADVICE
           </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes slideIn { from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)} }
-        @keyframes spin    { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
-        @keyframes blink   { 0%,100%{opacity:1}50%{opacity:0.3} }
-        @keyframes pulse   { 0%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)} }
-        @keyframes fadeIn  { from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)} }
+        @keyframes slideIn  { from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)} }
+        @keyframes spin     { from{transform:rotate(0deg)}to{transform:rotate(360deg)} }
+        @keyframes blink    { 0%,100%{opacity:1}50%{opacity:0.3} }
+        @keyframes pulse    { 0%{box-shadow:0 0 0 0 rgba(167,139,250,0.4)}70%{box-shadow:0 0 0 10px rgba(167,139,250,0)}100%{box-shadow:0 0 0 0 rgba(167,139,250,0)} }
+        @keyframes fadeIn   { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }
+        @keyframes float    { 0%,100%{transform:translate(0,0)}25%{transform:translate(30px,-20px)}50%{transform:translate(-15px,25px)}75%{transform:translate(20px,10px)} }
+        @keyframes shimmer  { 0%{background-position:200% center}100%{background-position:-200% center} }
         * { box-sizing:border-box; }
-        button:hover { opacity:0.82; }
-        textarea { font-family:monospace; color:#e2e8f0; }
-        ::-webkit-scrollbar{width:5px;height:5px}
-        ::-webkit-scrollbar-thumb{background:rgba(6,182,212,0.3);border-radius:3px}
+        body { background:#030711; }
+        button:hover { opacity:0.85; transform:translateY(-1px); }
+        button:active { transform:translateY(0); }
+        input:focus { border-color:rgba(167,139,250,0.4) !important; box-shadow:0 0 0 3px rgba(167,139,250,0.08); }
+        textarea { font-family:'JetBrains Mono',monospace; color:#e2e8f0; }
+        textarea:focus { border-color:rgba(167,139,250,0.4) !important; }
+        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(167,139,250,0.2);border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(167,139,250,0.4)}
+        ::selection{background:rgba(167,139,250,0.25);color:#e2e8f0}
       `}</style>
     </>
   );
