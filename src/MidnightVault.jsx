@@ -853,67 +853,112 @@ export default function MidnightVault() {
         )}
 
         {/* Wallet picker modal */}
-        {walletModal && (
-          <div style={ov} onClick={() => setWalletModal(false)}>
-            <div style={{ ...mod, width:400 }} onClick={e => e.stopPropagation()}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                <div style={{ fontSize:18, fontWeight:800, color:"#e2e8f0" }}>Connect Wallet</div>
-                <button style={{ background:"none", border:"none", color:"#64748b", fontSize:18,
-                  cursor:"pointer", padding:"4px 8px" }} onClick={() => setWalletModal(false)}>✕</button>
-              </div>
-              <div style={{ fontSize:11, color:"#475569", fontFamily:"monospace", marginBottom:18 }}>
-                Choose your preferred wallet to connect
-              </div>
+        {walletModal && (() => {
+          const detected = WALLETS.filter(w => w.detect());
+          return (
+            <div style={ov} onClick={() => setWalletModal(false)}>
+              <div style={{ background:"#0a0f1e", border:"1px solid rgba(6,182,212,0.2)",
+                borderRadius:20, padding:0, width:380, boxShadow:"0 25px 80px rgba(0,0,0,0.6), 0 0 40px rgba(6,182,212,0.08)",
+                overflow:"hidden" }} onClick={e => e.stopPropagation()}>
 
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {WALLETS.map(w => {
-                  const detected = w.detect();
-                  return (
-                    <button key={w.id}
-                      style={{
-                        display:"flex", alignItems:"center", gap:14, width:"100%",
-                        padding:"14px 16px", borderRadius:12, cursor: detected ? "pointer" : "default",
-                        background: detected ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.015)",
-                        border: detected ? `1px solid ${w.color}30` : "1px solid rgba(255,255,255,0.05)",
-                        transition:"all 0.2s", opacity: detected ? 1 : 0.4,
-                        position:"relative", overflow:"hidden",
-                      }}
-                      onClick={() => detected && connectWallet(w)}
-                      onMouseEnter={e => { if(detected) e.currentTarget.style.background=`${w.color}15`; e.currentTarget.style.borderColor=`${w.color}60`; }}
-                      onMouseLeave={e => { e.currentTarget.style.background=detected?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.015)"; e.currentTarget.style.borderColor=detected?`${w.color}30`:"rgba(255,255,255,0.05)"; }}
-                    >
-                      {/* Icon */}
-                      <div style={{ width:40, height:40, borderRadius:10, display:"flex",
-                        alignItems:"center", justifyContent:"center", fontSize:22,
-                        background:`${w.color}15`, border:`1px solid ${w.color}25`, flexShrink:0 }}>
-                        {w.icon}
-                      </div>
-                      {/* Info */}
-                      <div style={{ flex:1, textAlign:"left" }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0", marginBottom:2 }}>{w.name}</div>
-                        <div style={{ fontSize:10, fontFamily:"monospace", color: detected ? "#22c55e" : "#ef4444" }}>
-                          {detected ? "● Detected" : "Not installed"}
-                        </div>
-                      </div>
-                      {/* Arrow */}
-                      {detected && (
-                        <div style={{ color:w.color, fontSize:16, fontWeight:700 }}>→</div>
-                      )}
+                {/* Header gradient bar */}
+                <div style={{ height:3, background:"linear-gradient(90deg, #06b6d4, #a78bfa, #9945FF)" }} />
+
+                <div style={{ padding:"24px 28px 20px" }}>
+                  {/* Title row */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                    <div style={{ fontSize:20, fontWeight:800, color:"#e2e8f0" }}>Connect Wallet</div>
+                    <button style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)",
+                      borderRadius:8, color:"#64748b", fontSize:14, cursor:"pointer", width:32, height:32,
+                      display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s" }}
+                      onClick={() => setWalletModal(false)}
+                      onMouseEnter={e => { e.currentTarget.style.background="rgba(239,68,68,0.1)"; e.currentTarget.style.color="#ef4444"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.color="#64748b"; }}>
+                      ✕
                     </button>
-                  );
-                })}
-              </div>
+                  </div>
+                  <div style={{ fontSize:12, color:"#475569", marginBottom:22 }}>
+                    Select a wallet to get started
+                  </div>
 
-              <div style={{ marginTop:16, padding:"10px 14px", borderRadius:8,
-                background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", lineHeight:1.6 }}>
-                  By connecting, you agree to interact with a testnet demo.
-                  No real funds will be at risk. Only wallets with EVM support are shown.
+                  {/* Detected wallets */}
+                  {detected.length > 0 ? (
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {detected.map((w, i) => (
+                        <button key={w.id}
+                          style={{
+                            display:"flex", alignItems:"center", gap:14, width:"100%",
+                            padding:"14px 18px", borderRadius:14, cursor:"pointer",
+                            background:"rgba(255,255,255,0.03)",
+                            border:"1px solid rgba(255,255,255,0.06)",
+                            transition:"all 0.25s ease",
+                            animation:`fadeIn 0.3s ease ${i * 0.05}s both`,
+                          }}
+                          onClick={() => connectWallet(w)}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background=`${w.color}12`;
+                            e.currentTarget.style.borderColor=`${w.color}50`;
+                            e.currentTarget.style.transform="translateX(4px)";
+                            e.currentTarget.style.boxShadow=`0 0 20px ${w.color}15`;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background="rgba(255,255,255,0.03)";
+                            e.currentTarget.style.borderColor="rgba(255,255,255,0.06)";
+                            e.currentTarget.style.transform="translateX(0)";
+                            e.currentTarget.style.boxShadow="none";
+                          }}
+                        >
+                          <div style={{ width:44, height:44, borderRadius:12, display:"flex",
+                            alignItems:"center", justifyContent:"center", fontSize:24,
+                            background:`${w.color}12`, flexShrink:0 }}>
+                            {w.icon}
+                          </div>
+                          <div style={{ flex:1, textAlign:"left" }}>
+                            <div style={{ fontSize:15, fontWeight:700, color:"#e2e8f0" }}>{w.name}</div>
+                          </div>
+                          <div style={{ color:"#334155", fontSize:18, transition:"all 0.2s" }}>›</div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    /* No wallets detected */
+                    <div style={{ textAlign:"center", padding:"30px 20px" }}>
+                      <div style={{ fontSize:40, marginBottom:14 }}>🔌</div>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0", marginBottom:8 }}>
+                        No wallet detected
+                      </div>
+                      <div style={{ fontSize:12, color:"#475569", lineHeight:1.6, marginBottom:18 }}>
+                        Install a Web3 wallet to connect
+                      </div>
+                      <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+                        <a href="https://metamask.io/download/" target="_blank" rel="noreferrer"
+                          style={{ padding:"10px 18px", borderRadius:10, fontSize:12, fontWeight:700,
+                            fontFamily:"monospace", textDecoration:"none", color:"#F6851B",
+                            background:"rgba(246,133,27,0.1)", border:"1px solid rgba(246,133,27,0.25)",
+                            transition:"all 0.2s" }}>
+                          🦊 Get MetaMask
+                        </a>
+                        <a href="https://www.coinbase.com/wallet" target="_blank" rel="noreferrer"
+                          style={{ padding:"10px 18px", borderRadius:10, fontSize:12, fontWeight:700,
+                            fontFamily:"monospace", textDecoration:"none", color:"#0052FF",
+                            background:"rgba(0,82,255,0.1)", border:"1px solid rgba(0,82,255,0.25)",
+                            transition:"all 0.2s" }}>
+                          🔵 Get Coinbase
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div style={{ marginTop:18, paddingTop:14, borderTop:"1px solid rgba(255,255,255,0.05)",
+                    fontSize:10, color:"#334155", fontFamily:"monospace", textAlign:"center", lineHeight:1.6 }}>
+                    Testnet demo · No real funds at risk
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── Main ── */}
         <div style={{ position:"relative", zIndex:1, maxWidth:1140, margin:"0 auto", padding:"22px 18px" }}>
