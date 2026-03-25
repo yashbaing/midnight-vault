@@ -308,6 +308,8 @@ export default function MidnightVault() {
   const [walletAddr, setWalletAddr] = useState(null);
   const [walletBal, setWalletBal]   = useState(null); // ETH balance
   const [chainId, setChainId]       = useState(null);
+  const [walletModal, setWalletModal] = useState(false); // wallet picker
+  const [walletName, setWalletName]   = useState(null);  // which wallet connected
   const [txLog, setTxLog]       = useState([]);
   const [depModal, setDepMod]   = useState(null);
   const [depAmt, setDepAmt]     = useState("");
@@ -422,28 +424,57 @@ export default function MidnightVault() {
     block:Math.floor(Math.random()*999999+1000000),
   }, ...l].slice(0,30));
 
-  const handleConnect = async () => {
-    if (!window.ethereum) {
-      notify("⚠ MetaMask not found — install it from metamask.io");
+  // ── Wallet definitions ──────────────────────────────────────────────────
+  const WALLETS = [
+    { id:"metamask",    name:"MetaMask",        color:"#F6851B", icon:"🦊",
+      detect: () => window.ethereum?.isMetaMask,
+      provider: () => window.ethereum },
+    { id:"coinbase",    name:"Coinbase Wallet",  color:"#0052FF", icon:"🔵",
+      detect: () => window.ethereum?.isCoinbaseWallet || window.coinbaseWalletExtension,
+      provider: () => window.coinbaseWalletExtension || window.ethereum },
+    { id:"trust",       name:"Trust Wallet",     color:"#3375BB", icon:"🛡️",
+      detect: () => window.ethereum?.isTrust || window.trustwallet,
+      provider: () => window.trustwallet?.ethereum || window.ethereum },
+    { id:"brave",       name:"Brave Wallet",     color:"#FB542B", icon:"🦁",
+      detect: () => window.ethereum?.isBraveWallet || navigator.brave,
+      provider: () => window.ethereum },
+    { id:"okx",         name:"OKX Wallet",       color:"#000000", icon:"⭕",
+      detect: () => window.okxwallet,
+      provider: () => window.okxwallet },
+    { id:"phantom",     name:"Phantom",          color:"#AB9FF2", icon:"👻",
+      detect: () => window.phantom?.ethereum,
+      provider: () => window.phantom?.ethereum },
+    { id:"rabby",       name:"Rabby Wallet",     color:"#8697FF", icon:"🐰",
+      detect: () => window.ethereum?.isRabby,
+      provider: () => window.ethereum },
+    { id:"injected",    name:"Browser Wallet",   color:"#94a3b8", icon:"🌐",
+      detect: () => !!window.ethereum,
+      provider: () => window.ethereum },
+  ];
+
+  const connectWallet = async (wallet) => {
+    const prov = wallet.provider();
+    if (!prov) {
+      notify(`⚠ ${wallet.name} not detected — please install it`);
       return;
     }
+    setWalletModal(false);
     setCing(true);
     try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      const accounts = await prov.request({ method: "eth_requestAccounts" });
       const addr = accounts[0];
       setWalletAddr(addr);
-      const chain = await window.ethereum.request({ method: "eth_chainId" });
+      setWalletName(wallet.name);
+      const chain = await prov.request({ method: "eth_chainId" });
       setChainId(chain);
-      // Fetch ETH balance
-      const balHex = await window.ethereum.request({ method: "eth_getBalance", params: [addr, "latest"] });
+      const balHex = await prov.request({ method: "eth_getBalance", params: [addr, "latest"] });
       const balEth = parseInt(balHex, 16) / 1e18;
       setWalletBal(balEth);
-      // Auto-fill ETH balance in assets
       setAssets(prev => prev.map(a => a.id === "ETH" ? {...a, balance: +(balEth.toFixed(6))} : a));
       setConn(true); setCing(false);
       const shortAddr = addr.slice(0,6) + "…" + addr.slice(-4);
-      addTx("connect", `Wallet ${shortAddr} connected`, addr.slice(0,18));
-      notify(`🔗 Connected: ${shortAddr}`);
+      addTx("connect", `${wallet.name} ${shortAddr} connected`, addr.slice(0,18));
+      notify(`🔗 ${wallet.name}: ${shortAddr}`);
     } catch (err) {
       setCing(false);
       notify("❌ Connection rejected");
@@ -451,7 +482,7 @@ export default function MidnightVault() {
   };
 
   const handleDisconnect = () => {
-    setConn(false); setWalletAddr(null); setWalletBal(null); setChainId(null);
+    setConn(false); setWalletAddr(null); setWalletBal(null); setChainId(null); setWalletName(null);
     notify("Wallet disconnected");
   };
 
@@ -472,7 +503,7 @@ export default function MidnightVault() {
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0xaa36a7" }], // Sepolia
+        params: [{ chainId: "0xaa36a7" }],
       });
     } catch (err) {
       if (err.code === 4902) {
@@ -490,7 +521,7 @@ export default function MidnightVault() {
     }
   };
 
-  // Listen for MetaMask account/chain changes
+  // Listen for account/chain changes
   useEffect(() => {
     if (!window.ethereum) return;
     const onAccounts = (accs) => {
@@ -821,6 +852,69 @@ export default function MidnightVault() {
           </div>
         )}
 
+        {/* Wallet picker modal */}
+        {walletModal && (
+          <div style={ov} onClick={() => setWalletModal(false)}>
+            <div style={{ ...mod, width:400 }} onClick={e => e.stopPropagation()}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                <div style={{ fontSize:18, fontWeight:800, color:"#e2e8f0" }}>Connect Wallet</div>
+                <button style={{ background:"none", border:"none", color:"#64748b", fontSize:18,
+                  cursor:"pointer", padding:"4px 8px" }} onClick={() => setWalletModal(false)}>✕</button>
+              </div>
+              <div style={{ fontSize:11, color:"#475569", fontFamily:"monospace", marginBottom:18 }}>
+                Choose your preferred wallet to connect
+              </div>
+
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {WALLETS.map(w => {
+                  const detected = w.detect();
+                  return (
+                    <button key={w.id}
+                      style={{
+                        display:"flex", alignItems:"center", gap:14, width:"100%",
+                        padding:"14px 16px", borderRadius:12, cursor: detected ? "pointer" : "default",
+                        background: detected ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.015)",
+                        border: detected ? `1px solid ${w.color}30` : "1px solid rgba(255,255,255,0.05)",
+                        transition:"all 0.2s", opacity: detected ? 1 : 0.4,
+                        position:"relative", overflow:"hidden",
+                      }}
+                      onClick={() => detected && connectWallet(w)}
+                      onMouseEnter={e => { if(detected) e.currentTarget.style.background=`${w.color}15`; e.currentTarget.style.borderColor=`${w.color}60`; }}
+                      onMouseLeave={e => { e.currentTarget.style.background=detected?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.015)"; e.currentTarget.style.borderColor=detected?`${w.color}30`:"rgba(255,255,255,0.05)"; }}
+                    >
+                      {/* Icon */}
+                      <div style={{ width:40, height:40, borderRadius:10, display:"flex",
+                        alignItems:"center", justifyContent:"center", fontSize:22,
+                        background:`${w.color}15`, border:`1px solid ${w.color}25`, flexShrink:0 }}>
+                        {w.icon}
+                      </div>
+                      {/* Info */}
+                      <div style={{ flex:1, textAlign:"left" }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0", marginBottom:2 }}>{w.name}</div>
+                        <div style={{ fontSize:10, fontFamily:"monospace", color: detected ? "#22c55e" : "#ef4444" }}>
+                          {detected ? "● Detected" : "Not installed"}
+                        </div>
+                      </div>
+                      {/* Arrow */}
+                      {detected && (
+                        <div style={{ color:w.color, fontSize:16, fontWeight:700 }}>→</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop:16, padding:"10px 14px", borderRadius:8,
+                background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", lineHeight:1.6 }}>
+                  By connecting, you agree to interact with a testnet demo.
+                  No real funds will be at risk. Only wallets with EVM support are shown.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Main ── */}
         <div style={{ position:"relative", zIndex:1, maxWidth:1140, margin:"0 auto", padding:"22px 18px" }}>
 
@@ -861,13 +955,13 @@ export default function MidnightVault() {
                 background:connected?"rgba(34,197,94,0.08)":"transparent",
                 color:connected?"#22c55e":"#94a3b8", cursor:"pointer", fontSize:12,
                 fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:8 }}
-                onClick={connected ? handleDisconnect : handleConnect} disabled={connecting}>
+                onClick={connected ? handleDisconnect : () => setWalletModal(true)} disabled={connecting}>
                 <span style={{ width:7, height:7, borderRadius:"50%", display:"inline-block",
                   background:connected?"#22c55e":connecting?"#eab308":"#475569",
                   boxShadow:connected?"0 0 8px #22c55e":"none",
                   animation:connected?"blink 2s infinite":"none" }} />
                 {connecting ? "CONNECTING…" : connected
-                  ? `${walletAddr.slice(0,6)}…${walletAddr.slice(-4)}`
+                  ? `${walletName ? walletName + " · " : ""}${walletAddr.slice(0,6)}…${walletAddr.slice(-4)}`
                   : "CONNECT WALLET"}
               </button>
             </div>
@@ -1095,7 +1189,7 @@ export default function MidnightVault() {
                       </div>
                       <div style={{textAlign:"right"}}>
                         {!isC&&<button style={{...btn(a.color),padding:"6px 12px",fontSize:12}}
-                          onClick={()=>connected?setDepMod(a):notify("Connect wallet first")}>+</button>}
+                          onClick={()=>connected?setDepMod(a):setWalletModal(true)}>+</button>}
                       </div>
                     </div>
                   );
@@ -1350,7 +1444,8 @@ export default function MidnightVault() {
               <div style={lbl}>TRANSACTION LOG · MIDNIGHT TESTNET</div>
               {txLog.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"40px 0", color:"#334155",
-                  fontFamily:"monospace", fontSize:12 }}>Connect wallet to see activity</div>
+                  fontFamily:"monospace", fontSize:12, cursor:"pointer" }}
+                  onClick={() => setWalletModal(true)}>Click to connect wallet</div>
               ) : txLog.map(tx => {
                 const tc = {connect:"#06b6d4",deposit:"#22c55e",rebalance:"#a78bfa",withdraw:"#f97316"}[tx.type]||"#94a3b8";
                 return (
