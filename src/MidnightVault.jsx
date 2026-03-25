@@ -280,6 +280,7 @@ function AllocSlider({ label, color, value, onChange, disabled }) {
 
 // ─── BASE ASSETS ─────────────────────────────────────────────────────────────
 const BASE_ASSETS = [
+  { id:"tDUST", symbol:"tDUST", name:"Midnight tDUST", color:"#a78bfa", balance:0 },
   { id:"BTC", symbol:"BTC", name:"Bitcoin",  color:"#F7931A", balance:0 },
   { id:"ETH", symbol:"ETH", name:"Ethereum", color:"#627EEA", balance:0 },
   { id:"SOL", symbol:"SOL", name:"Solana",   color:"#9945FF", balance:0 },
@@ -859,100 +860,119 @@ export default function MidnightVault() {
                 {depTab === "faucet" && (
                   <div>
                     <div style={{ textAlign:"center", padding:"10px 0 18px" }}>
-                      <div style={{ fontSize:36, marginBottom:10 }}>🚰</div>
-                      <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0", marginBottom:4 }}>Get Free Testnet Tokens</div>
-                      <div style={{ fontSize:11, color:"#475569", lineHeight:1.6 }}>Claim tokens from public faucets</div>
+                      <div style={{ fontSize:40, marginBottom:10 }}>🌙</div>
+                      <div style={{ fontSize:14, fontWeight:700, color:"#a78bfa", marginBottom:4 }}>Midnight Testnet Faucet</div>
+                      <div style={{ fontSize:11, color:"#475569", lineHeight:1.6 }}>Get free tDUST tokens for the Midnight testnet</div>
                     </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      {[
-                        { label:"Sepolia ETH", sub:"Alchemy Faucet", icon:"🔷", color:"#627EEA",
-                          url:"https://www.alchemy.com/faucets/ethereum-sepolia" },
-                        { label:"Sepolia ETH", sub:"Google Cloud Faucet", icon:"☁️", color:"#4285F4",
-                          url:"https://cloud.google.com/application/web3/faucet/ethereum/sepolia" },
-                        { label:"Sepolia ETH", sub:"Infura Faucet", icon:"🟠", color:"#FF6B35",
-                          url:"https://www.infura.io/faucet/sepolia" },
-                        { label:"Midnight tDUST", sub:"Official Midnight Faucet", icon:"🌙", color:"#a78bfa",
-                          url:"https://midnight.network/test-faucet" },
-                      ].map(f => (
-                        <a key={f.url} href={f.url} target="_blank" rel="noreferrer"
-                          style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px",
-                            borderRadius:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)",
-                            textDecoration:"none", transition:"all 0.2s" }}
-                          onMouseEnter={e => { e.currentTarget.style.background=`${f.color}10`; e.currentTarget.style.borderColor=`${f.color}40`; }}
-                          onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.06)"; }}>
-                          <span style={{ fontSize:22 }}>{f.icon}</span>
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:13, fontWeight:700, color:"#e2e8f0" }}>{f.label}</div>
-                            <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace" }}>{f.sub}</div>
-                          </div>
-                          <span style={{ color:f.color, fontSize:14 }}>↗</span>
-                        </a>
-                      ))}
-                    </div>
-                    {walletAddr && (
-                      <div style={{ marginTop:14, padding:"10px 14px", borderRadius:8,
+                    <a href="https://midnight.network/test-faucet" target="_blank" rel="noreferrer"
+                      style={{ display:"flex", alignItems:"center", gap:14, padding:"16px 18px",
+                        borderRadius:14, background:"rgba(167,139,250,0.08)", border:"1px solid rgba(167,139,250,0.2)",
+                        textDecoration:"none", transition:"all 0.2s", marginBottom:12 }}
+                      onMouseEnter={e => { e.currentTarget.style.background="rgba(167,139,250,0.15)"; e.currentTarget.style.borderColor="rgba(167,139,250,0.4)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="rgba(167,139,250,0.08)"; e.currentTarget.style.borderColor="rgba(167,139,250,0.2)"; }}>
+                      <div style={{ width:44, height:44, borderRadius:12, display:"flex",
+                        alignItems:"center", justifyContent:"center", fontSize:22,
+                        background:"rgba(167,139,250,0.15)", flexShrink:0 }}>🚰</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0" }}>Request tDUST Tokens</div>
+                        <div style={{ fontSize:10, color:"#a78bfa", fontFamily:"monospace", marginTop:2 }}>midnight.network/test-faucet</div>
+                      </div>
+                      <span style={{ color:"#a78bfa", fontSize:18 }}>↗</span>
+                    </a>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      <div style={{ padding:"12px 14px", borderRadius:10,
                         background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)" }}>
-                        <div style={{ fontSize:9, color:"#475569", fontFamily:"monospace", letterSpacing:1, marginBottom:4 }}>
-                          YOUR ADDRESS (tap to copy)
-                        </div>
-                        <div style={{ fontSize:11, fontFamily:"monospace", color:"#06b6d4", wordBreak:"break-all", cursor:"pointer" }}
-                          onClick={() => { navigator.clipboard.writeText(walletAddr); notify("📋 Address copied!"); }}>
-                          {walletAddr} <span style={{ color:"#475569" }}>⎘</span>
+                        <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", letterSpacing:1, marginBottom:6 }}>HOW IT WORKS</div>
+                        <div style={{ fontSize:11, color:"#94a3b8", lineHeight:1.7 }}>
+                          1. Click the faucet link above<br/>
+                          2. Connect your Lace Midnight Preview wallet<br/>
+                          3. Request tDUST tokens (free, testnet only)<br/>
+                          4. Come back and deposit tDUST into your vault
                         </div>
                       </div>
-                    )}
+                      <div style={{ padding:"12px 14px", borderRadius:10,
+                        background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)" }}>
+                        <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace", letterSpacing:1, marginBottom:6 }}>SUPPORTED WALLETS</div>
+                        <div style={{ fontSize:11, color:"#94a3b8", lineHeight:1.7 }}>
+                          Lace Wallet · SubWallet · NuFi · Vespr · Gero · Tokeo Pay · Begin Wallet
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {/* CREDIT TAB */}
-                {depTab === "credit" && (
-                  <div>
-                    <div style={{ textAlign:"center", padding:"10px 0 14px" }}>
-                      <div style={{ fontSize:36, marginBottom:10 }}>🎁</div>
-                      <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0", marginBottom:4 }}>Testnet Demo Credits</div>
-                      <div style={{ fontSize:11, color:"#475569", lineHeight:1.6 }}>Instantly credit test tokens to your vault</div>
-                    </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      {[
-                        { sym:"BTC", amount:0.5, color:"#F7931A" },
-                        { sym:"ETH", amount:5, color:"#627EEA" },
-                        { sym:"SOL", amount:50, color:"#9945FF" },
-                      ].map(c => {
-                        const asset = [...assets, ...custom].find(a => a.symbol === c.sym);
-                        if (!asset) return null;
-                        const usdVal = (prices[c.sym]?.price || 0) * c.amount;
-                        return (
-                          <div key={c.sym} style={{ display:"flex", alignItems:"center", gap:12,
-                            padding:"12px 14px", borderRadius:12,
-                            background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)" }}>
-                            <div style={{ width:38, height:38, borderRadius:10, display:"flex",
-                              alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800,
-                              background:`${c.color}15`, color:c.color, fontFamily:"monospace", flexShrink:0 }}>
-                              {c.sym}
+                {depTab === "credit" && (() => {
+                  const tdustAsset = assets.find(a => a.id === "tDUST");
+                  const tdustBal = tdustAsset ? tdustAsset.balance : 0;
+                  return (
+                    <div>
+                      <div style={{ textAlign:"center", padding:"10px 0 14px" }}>
+                        <div style={{ fontSize:40, marginBottom:10 }}>🌙</div>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#a78bfa", marginBottom:4 }}>Midnight Testnet Credits</div>
+                        <div style={{ fontSize:11, color:"#475569", lineHeight:1.6 }}>Credit tDUST tokens to your vault for demo</div>
+                      </div>
+
+                      {/* Current tDUST balance */}
+                      <div style={{ padding:"12px 16px", borderRadius:12, marginBottom:14,
+                        background:"rgba(167,139,250,0.06)", border:"1px solid rgba(167,139,250,0.15)" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div>
+                            <div style={{ fontSize:9, color:"#a78bfa", fontFamily:"monospace", letterSpacing:1 }}>VAULT tDUST BALANCE</div>
+                            <div style={{ fontSize:22, fontWeight:800, fontFamily:"monospace", color:"#a78bfa", marginTop:4 }}>
+                              {tdustBal.toFixed(2)} tDUST
                             </div>
-                            <div style={{ flex:1 }}>
-                              <div style={{ fontSize:14, fontWeight:700, color:"#e2e8f0" }}>{c.amount} {c.sym}</div>
-                              <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace" }}>≈ {fmtUSD(usdVal)}</div>
-                            </div>
-                            <button style={{ padding:"8px 16px", borderRadius:8, fontSize:11,
-                              fontFamily:"monospace", fontWeight:700, cursor:"pointer", transition:"all 0.2s",
-                              background:`${c.color}15`, border:`1px solid ${c.color}35`, color:c.color }}
-                              disabled={crediting}
-                              onClick={() => handleCredit(asset, c.amount)}>
-                              {crediting ? "…" : "+ CREDIT"}
-                            </button>
                           </div>
-                        );
-                      })}
-                    </div>
-                    <div style={{ marginTop:14, padding:"10px 14px", borderRadius:8,
-                      background:"rgba(234,179,8,0.04)", border:"1px solid rgba(234,179,8,0.12)" }}>
-                      <div style={{ fontSize:10, color:"#eab308", fontFamily:"monospace", lineHeight:1.6 }}>
-                        ⚠ Demo credits are simulated — use faucets for real testnet tokens.
+                          <div style={{ fontSize:32 }}>🌙</div>
+                        </div>
+                      </div>
+
+                      {/* Credit amounts */}
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
+                        {[100, 500, 1000, 5000].map(amt => (
+                          <button key={amt}
+                            style={{ padding:"14px 12px", borderRadius:12, cursor:"pointer",
+                              background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)",
+                              transition:"all 0.2s", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}
+                            disabled={crediting}
+                            onClick={() => tdustAsset && handleCredit(tdustAsset, amt)}
+                            onMouseEnter={e => { e.currentTarget.style.background="rgba(167,139,250,0.1)"; e.currentTarget.style.borderColor="rgba(167,139,250,0.35)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.06)"; }}>
+                            <div style={{ fontSize:18, fontWeight:800, color:"#a78bfa", fontFamily:"monospace" }}>
+                              {crediting ? "…" : `+${amt}`}
+                            </div>
+                            <div style={{ fontSize:10, color:"#475569", fontFamily:"monospace" }}>tDUST</div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Custom amount */}
+                      <div style={{ display:"flex", gap:8, marginBottom:14 }}>
+                        <input style={{ ...inp, flex:1, marginBottom:0 }} type="number" min="0" step="any"
+                          placeholder="Custom amount"
+                          value={depAmt} onChange={e => setDepAmt(e.target.value)} />
+                        <button style={{ padding:"10px 18px", borderRadius:8, fontSize:12,
+                          fontFamily:"monospace", fontWeight:700, cursor:"pointer",
+                          background:"rgba(167,139,250,0.15)", border:"1px solid rgba(167,139,250,0.35)",
+                          color:"#a78bfa", whiteSpace:"nowrap" }}
+                          disabled={crediting || !depAmt}
+                          onClick={() => {
+                            const amt = parseFloat(depAmt);
+                            if (amt > 0 && tdustAsset) { handleCredit(tdustAsset, amt); setDepAmt(""); }
+                          }}>
+                          + CREDIT
+                        </button>
+                      </div>
+
+                      <div style={{ padding:"10px 14px", borderRadius:8,
+                        background:"rgba(234,179,8,0.04)", border:"1px solid rgba(234,179,8,0.12)" }}>
+                        <div style={{ fontSize:10, color:"#eab308", fontFamily:"monospace", lineHeight:1.6 }}>
+                          ⚠ Demo credits — tDUST tokens are simulated for testing. Use the Midnight faucet for real testnet tokens.
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -1320,8 +1340,8 @@ export default function MidnightVault() {
                       text={pxStatus==="ok"?`LIVE · ${liveClock}`:pxStatus==="loading"?"FETCHING…":"ERROR"} />
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
-                    <button style={btn("#22c55e")} onClick={() => { setDepMod(allAssets[0]); setDepTab("faucet"); }}>🚰 FAUCET</button>
-                    <button style={btn("#a78bfa")} onClick={() => { setDepMod(allAssets[0]); setDepTab("credit"); }}>🎁 CREDIT</button>
+                    <button style={btn("#a78bfa")} onClick={() => { setDepMod(allAssets.find(a=>a.id==="tDUST")||allAssets[0]); setDepTab("faucet"); }}>🌙 FAUCET</button>
+                    <button style={btn("#a78bfa")} onClick={() => { setDepMod(allAssets.find(a=>a.id==="tDUST")||allAssets[0]); setDepTab("credit"); }}>🎁 CREDIT</button>
                     <button style={btn("#06b6d4")} onClick={() => setAddMod(true)}>+ ADD COIN</button>
                   </div>
                 </div>
